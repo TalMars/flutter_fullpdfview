@@ -65,7 +65,7 @@
 
         [[UIDevice currentDevice] beginGeneratingDeviceOrientationNotifications];
         [[NSNotificationCenter defaultCenter]
-           addObserver:self selector:@selector(orientationChanged:)
+         addObserver:self selector:@selector(orientationChanged:)
            name:UIDeviceOrientationDidChangeNotification
            object:[UIDevice currentDevice]];
         BOOL autoSpacing = [args[@"autoSpacing"] boolValue];
@@ -99,6 +99,7 @@
                 } else {
                     _pdfView.displayDirection = kPDFDisplayDirectionVertical;
                 }
+                
                 _pdfView.autoScales = autoSpacing;
                 _pdfView.minScaleFactor = _pdfView.scaleFactorForSizeToFit;
                 _pdfView.maxScaleFactor = 4.0;
@@ -108,53 +109,27 @@
                 if (pageCount <= defaultPage) {
                     defaultPage = pageCount - 1;
                 }
-                PDFPage* pageInitial = [document pageAtIndex: 0];
                 _pdfView.document = document;
-                [_pdfView goToPage: pageInitial];
-                CGRect pageRectInitial = [pageInitial boundsForBox:[_pdfView displayBox]];
-                pageSize = CGSizeMake(pageRectInitial.size.width, pageRectInitial.size.height);
-                CGRect parentRectInitial = [[UIScreen mainScreen] bounds];
-
-                if (frame.size.width > 0 && frame.size.height > 0) {
-                    parentRectInitial = frame;
-                }else {
-                    NSLog(@"FRAME size is 0....");
-                }
-                CGFloat scaleInitial;
-                scaleInitial = 1.0f;
-                if(!dualPage){
-                    if (parentRectInitial.size.width / parentRectInitial.size.height >= pageRectInitial.size.width / pageRectInitial.size.height) {
-                        scaleInitial = parentRectInitial.size.height / pageRectInitial.size.height;
-                    } else {
-                        scaleInitial = parentRectInitial.size.width / pageRectInitial.size.width;
-                    }
-                }else{
-                    if (parentRectInitial.size.width / pageRectInitial.size.height >= pageRectInitial.size.width*2 / pageRectInitial.size.height) {
-                        scaleInitial = parentRectInitial.size.height / pageRectInitial.size.height;
-                    } else {
-                        scaleInitial = parentRectInitial.size.width / (parentRectInitial.size.width *2 )  ;
-                    }
-                }
-                 _pdfView.scaleFactor = scaleInitial;
-                if (UIDeviceOrientationIsLandscape([UIDevice currentDevice].orientation))
-                {
-                  _pdfView.displayMode = dualPage ? kPDFDisplayTwoUp: kPDFDisplaySinglePageContinuous ;
-                  _pdfView.displaysAsBook = dualPage
-                      ? showCover
-                        ? YES : NO
-                      : NO;
-                  _pdfView.displaysPageBreaks = hasBreak;
-                }
-                else
-                {
+                
+//                if (UIDeviceOrientationIsLandscape([UIDevice currentDevice].orientation))
+//                {
+//                  _pdfView.displayMode = dualPage ? kPDFDisplayTwoUp: kPDFDisplaySinglePageContinuous ;
+//                  _pdfView.displaysAsBook = dualPage
+//                      ? showCover
+//                        ? YES : NO
+//                      : NO;
+//                  _pdfView.displaysPageBreaks = hasBreak;
+//                }
+//                else
+//                {
                              // code for Portrait orientation
                     [_pdfView usePageViewController:pageFling withViewOptions:nil];
                     _pdfView.displayMode = enableSwipe  ? kPDFDisplaySinglePageContinuous : kPDFDisplaySinglePage;
-                }
-
-
-                PDFPage* page = [document pageAtIndex: defaultPage];
-                [_pdfView goToPage: page];
+//                }
+                
+//                [self autoScale:frame
+//                               :defaultPage];
+                PDFPage* page = [_pdfView.document pageAtIndex: defaultPage];
                 CGRect pageRect = [page boundsForBox:[_pdfView displayBox]];
                 pageSize = CGSizeMake(pageRect.size.width, pageRect.size.height);
                 CGRect parentRect = [[UIScreen mainScreen] bounds];
@@ -164,22 +139,21 @@
                 }else {
                     NSLog(@"FRAME size is 0....");
                 }
-                CGFloat scale;
-                scale = 1.0f;
-                if(!dualPage){
+                CGFloat scale = 1.0f;
+                if(!_dualPage){
                     if (parentRect.size.width / parentRect.size.height >= pageRect.size.width / pageRect.size.height) {
                         scale = parentRect.size.height / pageRect.size.height;
                     } else {
                         scale = parentRect.size.width / pageRect.size.width;
                     }
                 }else{
-                    if (parentRect.size.width / parentRect.size.height >= pageRect.size.width*2 / pageRect.size.height) {
+                    if (parentRect.size.width / parentRect.size.height >= pageRect.size.width * 2 / pageRect.size.height) {
                         scale = parentRect.size.height / pageRect.size.height;
                     } else {
-                        scale = parentRect.size.width / (parentRect.size.width *2 )  ;
+                        scale = parentRect.size.width / (parentRect.size.width * 2 )  ;
                     }
                 }
-                 _pdfView.scaleFactor = scale;
+                _pdfView.scaleFactor = scale;
 
 
                 if([backgroundColor isEqual:  @"black"]) {
@@ -202,6 +176,21 @@
 
             }
         }
+        
+        if (@available(iOS 11.0, *)) {
+                    UIScrollView *_scrollView;
+
+                    for (id subview in _pdfView.subviews) {
+                        if ([subview isKindOfClass: [UIScrollView class]]) {
+                            _scrollView = subview;
+                        }
+                    }
+                    
+                    _scrollView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
+                    if (@available(iOS 13.0, *)) {
+                        _scrollView.automaticallyAdjustsScrollIndicatorInsets = NO;
+                    }
+                }
 
 
 
@@ -262,8 +251,8 @@
 
 - (void)setZoom:(FlutterMethodCall*)call result:(FlutterResult)result {
     NSDictionary<NSString*, NSNumber*>* arguments = [call arguments];
-    NSNumber* newZoom = arguments[@"newzoom"];
-    _pdfView.scaleFactor = newZoom
+    NSNumber *newZoom = arguments[@"newzoom"];
+    _pdfView.scaleFactor =  [newZoom doubleValue];
     result(nil);
 }
 
@@ -272,12 +261,12 @@
     result(nil);
 }
 - (void)getPageWidth:(FlutterMethodCall*)call result:(FlutterResult)result {
-    _pageWidth = [NSNumber numberWithFloat: pageSize.width*_pdfView.scaleFactor];
+    _pageWidth = [NSNumber numberWithFloat: pageSize.width * _pdfView.scaleFactor];
     result(_pageWidth);
 }
 
 - (void)getPageHeight:(FlutterMethodCall*)call result:(FlutterResult)result {
-    _pageHeight = [NSNumber numberWithFloat: pageSize.height*_pdfView.scaleFactor];
+    _pageHeight = [NSNumber numberWithFloat: pageSize.height * _pdfView.scaleFactor];
     result(_pageHeight);
 }
 - (void)getPageCount:(FlutterMethodCall*)call result:(FlutterResult)result {
@@ -319,7 +308,7 @@
 - (void) orientationChanged:(NSNotification *)note
 {
        UIDevice * device = note.object;
-        //_pdfView.autoScales = YES;
+        _pdfView.autoScales = YES;
           switch(device.orientation)
           {
              case UIDeviceOrientationPortrait:
